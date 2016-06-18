@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Afghanistan Population Density Heat Map</title>
+    <style>
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      #map {
+        height: 90%;
+      }
+      .whodoneit {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        font: bold 18px 'Times New Roman';
+        color: #333;
+        text-shadow: 1px 1px #fff;
+        text-align: right;
+        line-height: 1.3em;
+      }
+      .whodoneit > div {
+        font-size: 14px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="map"></div>
+    <div class="whodoneit">Google map wrapper
+      <div>2016 <a href="mailto:info@pixeldoctrine.com">@JonasB</a></div>
+    </div>
+    <input type="range" id="lat" min="-0.1" max="0.1" step="0.001"/>
+    <input type="range" id="lng" min="-0.1" max="0.1" step="0.001"/>
+    <input type="range" id="scale" min="0.9" max="1.1" step="0.001"/>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
+    <script>
+
+      var latoff = 0;
+      var lngoff = 0;
+      var scale = 1;
+
+      var afghanistan = {lat: 34, lng: 68};
+      var heatMapData;
+      var currentMap;
+
+      function initMap() {
+        heatMapData = new google.maps.MVCArray();
+
+        var map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 6,
+          center: afghanistan,
+          mapTypeId: google.maps.MapTypeId.HYBRID,
+          zoom_changed: update_heatmap,
+        });
+        map.addListener('dragend', update_heatmap);
+        update_heatmap();
+
+        /*var heat_gradient = [
+          'rgba(  0, 255, 255, 0)',
+          'rgba(  0, 255, 255, 1)',
+          'rgba(  0, 191, 255, 1)',
+          'rgba(  0, 127, 255, 1)',
+          'rgba(  0,  63, 255, 1)',
+          'rgba(  0,   0, 255, 1)',
+          'rgba(  0,   0, 223, 1)',
+          'rgba(  0,   0, 191, 1)',
+          'rgba(  0,   0, 159, 1)',
+          'rgba(  0,   0, 127, 1)',
+          'rgba( 63,   0,  91, 1)',
+          'rgba(127,   0,  63, 1)',
+          'rgba(191,   0,  31, 1)',
+          'rgba(255,   0,   0, 1)'
+        ];*/
+        var heatmap = new google.maps.visualization.HeatmapLayer({
+          data: heatMapData,
+          radius: 20,
+          //gradient: heat_gradient,
+          map: map
+        });
+
+        function update_heatmap() {
+          loadPoints(map.getCenter(), map.getZoom(),
+              function(pts){
+                heatMapData.clear();
+                var i,len;
+                for (i = 0,len=pts.length; i < len; ++i) {
+                  heatMapData.push(pts[i]);
+                }
+              },
+              function(zoom) {
+                heatmap.radius = 0.8*zoom*zoom - 10;
+              });
+        }
+
+        $('#lat').change(function() {
+          latoff = parseFloat($(this).val());
+          update_heatmap();
+        });
+        $('#lng').change(function() {
+          lngoff = parseFloat($(this).val());
+          update_heatmap();
+        });
+        $('#scale').change(function() {
+          scale = $(this).val();
+          update_heatmap();
+        });
+      }
+
+      function step(center, crd, exponent) {
+        var stepSize = Math.pow(2, exponent);
+        var offset = stepSize / 2 + 16;
+        var s = Math.round((crd-offset)/stepSize) * stepSize + offset;
+        console.log(center, stepSize, s);
+        return s;
+      }
+
+      function loadPoints(center, zoom, updateDataPoints, updateZoom) {
+        console.log(center.lat(), center.lng());
+        zoomStep = Math.floor(zoom/2) * 2;
+        var location = zoomStep + '_' + step(afghanistan.lat, center.lat(), 8-zoomStep/2) + '_' + step(afghanistan.lng, center.lng(), 8-zoomStep/2);
+        if (currentMap == location) {
+          updateZoom(zoom);
+          return;
+        }
+        currentMap = location;
+        $.get(location+'_popdata.json', function(data) {
+            console.log('loaded '+location)
+            console.log('lat,long,scale:', latoff,lngoff,scale);
+            var popdata = JSON.parse(data);
+            var pts = [];
+            var i,len;
+            for (i = 0,len=popdata.length; i < len; ++i) {
+              var lat = (popdata[i][0]-afghanistan.lat + latoff)*scale + afghanistan.lat;
+              var lng = (popdata[i][1]-afghanistan.lng + lngoff)*scale + afghanistan.lng;
+              pts.push({location:new google.maps.LatLng(lat,lng), weight:popdata[i][2]})
+            }
+            updateDataPoints(pts);
+            updateZoom(zoom)
+        });
+      }
+
+    </script>
+    <script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDM6irdE5CKBVVbZOIniJ1ulWEJIK44FfY&libraries=visualization&callback=initMap">
+    </script>
+  </body>
+</html>
