@@ -10,7 +10,7 @@
         padding: 0;
       }
       #map {
-        height: 90%;
+        height: 100%;
       }
       .whodoneit {
         position: fixed;
@@ -33,19 +33,12 @@
     <div class="whodoneit">Google map wrapper
       <div>2016 <a href="mailto:info@pixeldoctrine.com">@JonasB</a></div>
     </div>
-    <input type="range" id="lat" min="-0.1" max="0.1" step="0.001"/>
-    <input type="range" id="lng" min="-0.1" max="0.1" step="0.001"/>
-    <input type="range" id="scale" min="0.9" max="1.1" step="0.001"/>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
     <script>
 
-      var latoff = 0;
-      var lngoff = 0;
-      var scale = 1;
-
       var afghanistan = {lat: 34, lng: 68};
       var heatMapData;
-      var currentMap;
+      var currentMapName;
 
       function initMap() {
         heatMapData = new google.maps.MVCArray();
@@ -79,48 +72,29 @@
                 heatmap.radius = 0.8*zoom*zoom - 10;
               });
         }
-
-        $('#lat').change(function() {
-          latoff = parseFloat($(this).val());
-          update_heatmap();
-        });
-        $('#lng').change(function() {
-          lngoff = parseFloat($(this).val());
-          update_heatmap();
-        });
-        $('#scale').change(function() {
-          scale = $(this).val();
-          update_heatmap();
-        });
       }
 
       function step(center, crd, exponent) {
         var stepSize = Math.pow(2, exponent);
         var offset = stepSize / 2 + 16;
-        var s = Math.round((crd-offset)/stepSize) * stepSize + offset;
-        console.log(center, stepSize, s);
-        return s;
+        return Math.round((crd-offset)/stepSize) * stepSize + offset;
       }
 
       function loadPoints(center, zoom, updateDataPoints, updateZoom) {
-        console.log(center.lat(), center.lng());
         zoomStep = Math.floor(zoom/2) * 2;
         var location = zoomStep + '_' + step(afghanistan.lat, center.lat(), 8-zoomStep/2) + '_' + step(afghanistan.lng, center.lng(), 8-zoomStep/2);
-        if (currentMap == location) {
+        if (currentMapName == location) {
           updateZoom(zoom);
           return;
         }
-        currentMap = location;
+        currentMapName = location;
+        console.log(currentMapName);
         $.get(location+'_popdata.json', function(data) {
-            console.log('loaded '+location)
-            console.log('lat,long,scale:', latoff,lngoff,scale);
             var popdata = JSON.parse(data);
             var pts = [];
             var i,len;
             for (i = 0,len=popdata.length; i < len; ++i) {
-              var lat = (popdata[i][0]-afghanistan.lat + latoff)*scale + afghanistan.lat;
-              var lng = (popdata[i][1]-afghanistan.lng + lngoff)*scale + afghanistan.lng;
-              pts.push({location:new google.maps.LatLng(lat,lng), weight:popdata[i][2]})
+              pts.push({location:new google.maps.LatLng(popdata[i][0],popdata[i][1]), weight:popdata[i][2]})
             }
             updateDataPoints(pts);
             updateZoom(zoom)
