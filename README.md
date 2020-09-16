@@ -3,7 +3,7 @@
 # ![screenshot](screenshot.jpg)
 
 This tiny web app displays a population heat map over Afghanistan on Google Earth.
-Take it for a spin [here](http://pixeldoctrine.com/afghanistan-population-heatmap/).
+Take it for a spin [here](https://pixeldoctrine.com/afghanistan-population-heatmap/index.html).
 The heat map data loads at different levels of detail as you zoom and pan the map.
 
 ## Frontend
